@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert } from "react-native";
 import { validateName, validateEmail, validatePassword } from "../utils/validation";
 import { login, register } from "../services/api";
+import { saveAuthData } from "../services/storage";
 
 export const AuthForm = ({ navigation }) => {
     const [isLogin, setIsLogin] = useState(false);
@@ -27,19 +28,17 @@ export const AuthForm = ({ navigation }) => {
         try {
             if (isLogin) {
                 const data = await login(email, password);
-                console.log("Resposta da API:", data); // Verifique o retorno no console
-                const { access_token } = data; // Extraia os campos necessários
+                console.log("Login data:", data); // Log dos dados de login
+                const { access_token, family_id } = data;
+                await saveAuthData(access_token, family_id); // Salva os dados no AsyncStorage
                 Alert.alert("Sucesso", "Login realizado com sucesso!");
-                console.log("Token:", access_token);
-                navigation.navigate("Home"); // Redireciona para a Home
+                navigation.navigate("Home");
             } else {
                 const data = await register(name, email, password);
-                console.log("Resposta da API:", data); // Verifique o retorno no console
-                const { access_token, family_id } = data; // Extraia os campos necessários
+                const { access_token, family_id } = data;
+                await saveAuthData(access_token, family_id); // Salva os dados no AsyncStorage
                 Alert.alert("Sucesso", "Conta criada com sucesso!");
-                console.log("Token:", access_token);
-                console.log("Family ID:", family_id);
-                navigation.navigate("Home"); // Redireciona para a Home
+                navigation.navigate("Home");
             }
         } catch (err) {
             console.error("Erro ao processar a resposta:", err);

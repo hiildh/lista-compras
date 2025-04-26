@@ -1,15 +1,32 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import Login from "../screens/Login";
 import HomeScreen from "../screens/HomeScreen";
+import { getAuthData } from "../services/storage";
 
 const Stack = createStackNavigator();
 
 const AppNavigator = () => {
+    const [isAuthenticated, setIsAuthenticated] = useState(null);
+
+    useEffect(() => {
+        const checkAuth = async () => {
+            const { token } = await getAuthData();
+            setIsAuthenticated(!!token); // Define se o usuário está autenticado
+        };
+
+        checkAuth();
+    }, []);
+
+    if (isAuthenticated === null) {
+        // Exibe uma tela de carregamento enquanto verifica a autenticação
+        return null;
+    }
+
     return (
         <NavigationContainer>
-            <Stack.Navigator initialRouteName="Login">
+            <Stack.Navigator initialRouteName={isAuthenticated ? "Home" : "Login"}>
                 <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
                 <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
             </Stack.Navigator>
