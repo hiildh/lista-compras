@@ -3,6 +3,7 @@ import { createStackNavigator } from "@react-navigation/stack";
 import { NavigationContainer } from "@react-navigation/native";
 import Login from "../screens/Login";
 import HomeScreen from "../screens/HomeScreen";
+import FamilySettings from "../screens/FamilySettings"; // Importar a nova tela
 import { getAuthData } from "../services/storage";
 
 const Stack = createStackNavigator();
@@ -29,6 +30,7 @@ const AppNavigator = () => {
             <Stack.Navigator initialRouteName={isAuthenticated ? "Home" : "Login"}>
                 <Stack.Screen name="Login" component={Login} options={{ headerShown: false }} />
                 <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="FamilySettings" component={FamilySettings} options={{ title: "Configurações da Família" }}/>
             </Stack.Navigator>
         </NavigationContainer>
     );

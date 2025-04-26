@@ -1,23 +1,18 @@
 import React from "react";
-import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
-import { clearAuthData } from "../services/storage";
+import { View, Text, StyleSheet } from "react-native";
+import { ShoppingNavBar } from "../components/ShoppingNavBar";
 
 const HomeScreen = ({ navigation }) => {
-    const handleLogout = async () => {
-        await clearAuthData(); // Limpa os dados do AsyncStorage
-        navigation.reset({
-            index: 0,
-            routes: [{ name: "Login" }], // Redireciona para a tela de login
-        });
+    const handleCreateList = () => {
+        console.log("Criar nova lista");
+        // Adicione a lógica para criar uma nova lista
     };
 
     return (
         <View style={styles.container}>
-            <Text style={styles.title}>Bem-vindo à FamilyShop!</Text>
-            <Text style={styles.subtitle}>Aqui será sua página inicial.</Text>
-            <TouchableOpacity style={styles.button} onPress={handleLogout}>
-                <Text style={styles.buttonText}>Sair</Text>
-            </TouchableOpacity>
+        <Text style={styles.title}>Bem-vindo à FamilyShop!</Text>
+        <Text style={styles.subtitle}>Aqui será sua página inicial.</Text>
+        <ShoppingNavBar onCreateList={handleCreateList} navigation={navigation} />
         </View>
     );
 };
@@ -41,18 +36,6 @@ const styles = StyleSheet.create({
         color: "#6c757d",
         textAlign: "center",
         marginBottom: 16,
-    },
-    button: {
-        backgroundColor: "#9b87f5",
-        padding: 12,
-        borderRadius: 8,
-        alignItems: "center",
-        marginTop: 16,
-    },
-    buttonText: {
-        color: "#fff",
-        fontSize: 16,
-        fontWeight: "bold",
     },
 });
 
