@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { AuthForm } from '../components/AuthForm';
 
-const Login = () => {
+const Login = ({ navigation }) => {
     return (
         <View style={styles.container}>
             <View style={styles.header}>
@@ -12,7 +12,7 @@ const Login = () => {
                 </Text>
             </View>
             <View style={styles.formContainer}>
-                <AuthForm />
+                <AuthForm navigation={navigation} />
             </View>
         </View>
     );

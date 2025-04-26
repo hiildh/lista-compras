@@ -3,7 +3,7 @@ import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert } from "reac
 import { validateName, validateEmail, validatePassword } from "../utils/validation";
 import { login, register } from "../services/api";
 
-export const AuthForm = () => {
+export const AuthForm = ({ navigation }) => {
     const [isLogin, setIsLogin] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [name, setName] = useState("");
@@ -27,15 +27,23 @@ export const AuthForm = () => {
         try {
             if (isLogin) {
                 const data = await login(email, password);
+                console.log("Resposta da API:", data); // Verifique o retorno no console
+                const { access_token } = data; // Extraia os campos necessários
                 Alert.alert("Sucesso", "Login realizado com sucesso!");
-                console.log(data); // Substitua por navegação ou lógica adicional
+                console.log("Token:", access_token);
+                navigation.navigate("Home"); // Redireciona para a Home
             } else {
                 const data = await register(name, email, password);
+                console.log("Resposta da API:", data); // Verifique o retorno no console
+                const { access_token, family_id } = data; // Extraia os campos necessários
                 Alert.alert("Sucesso", "Conta criada com sucesso!");
-                console.log(data); // Substitua por navegação ou lógica adicional
+                console.log("Token:", access_token);
+                console.log("Family ID:", family_id);
+                navigation.navigate("Home"); // Redireciona para a Home
             }
         } catch (err) {
-            Alert.alert("Erro", err);
+            console.error("Erro ao processar a resposta:", err);
+            Alert.alert("Erro", "Ocorreu um erro ao processar sua solicitação.");
         }
     };
 
