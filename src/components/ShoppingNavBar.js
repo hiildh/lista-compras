@@ -2,53 +2,47 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet } from "react-native";
 import { Home, History, Users, UserCircle, Plus } from "lucide-react-native";
 
-export const ShoppingNavBar = ({ onCreateList, navigation }) => {
+export const ShoppingNavBar = ({ onAdd, navigation, isDetailScreen = false }) => {
     const isActive = (routeName) => {
-        // Aqui você pode implementar a lógica para verificar se a rota está ativa
-        // Por exemplo, você pode usar o estado de navegação ou props para determinar isso
         return navigation.getState().routes[navigation.getState().index].name === routeName;
     };
 
-    return (
-        <View style={styles.navbar}>
-        {/* Botão Home */}
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Home")}>
-            <Home size={24} color={isActive("Home") ? "#9b87f5" : "#6c757d"}/>
-            <Text style={[styles.navText, isActive("Home") && styles.activeText]}>Listas</Text>
-        </TouchableOpacity>
+    if (isDetailScreen == false) {
+        return (
+            <View style={styles.navbar}>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Home")}>
+                    <Home size={24} color={isActive("Home") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("Home") && styles.activeText]}>Listas</Text>
+                </TouchableOpacity>
 
-        {/* Botão Histórico */}
-        <TouchableOpacity style={styles.navItem}>
-            <History size={24} color="#6c757d" />
-            <Text style={styles.navText}>Histórico</Text>
-        </TouchableOpacity>
+                <TouchableOpacity style={styles.navItem}>
+                    <History size={24} color="#6c757d" />
+                    <Text style={styles.navText}>Histórico</Text>
+                </TouchableOpacity>
 
-        {/* Botão Nova Lista */}
-        {onCreateList && (
-            <View style={styles.createButtonContainer}>
-            <TouchableOpacity
-                style={styles.createButton}
-                onPress={onCreateList}
-            >
-                <Plus size={24} color="#fff" />
-            </TouchableOpacity>
-            <Text style={styles.navText}>Nova Lista</Text>
+                <View style={styles.createButtonContainer}>
+                    <TouchableOpacity
+                        style={styles.createButton}
+                        onPress={onAdd}
+                    >
+                        <Plus size={24} color="#fff" />
+                    </TouchableOpacity>
+                </View>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("FamilySettings")}>
+                    <Users size={24} color={isActive("FamilySettings") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("FamilySettings") && styles.activeText]}>Família</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem}>
+                    <UserCircle size={24} color="#6c757d" />
+                    <Text style={styles.navText}>Perfil</Text>
+                </TouchableOpacity>
             </View>
-        )}
+        );
+    }
 
-        {/* Botão Família */}
-        <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("FamilySettings")}> 
-            <Users size={24} color={isActive("FamilySettings") ? "#9b87f5" : "#6c757d"} />
-            <Text style={[styles.navText, isActive("FamilySettings") && styles.activeText]}>Família</Text>
-        </TouchableOpacity>
-
-        {/* Botão Perfil */}
-        <TouchableOpacity style={styles.navItem}>
-            <UserCircle size={24} color="#6c757d" />
-            <Text style={styles.navText}>Perfil</Text>
-        </TouchableOpacity>
-        </View>
-    );
+    return null;
 };
 
 const styles = StyleSheet.create({
