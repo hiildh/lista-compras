@@ -80,9 +80,7 @@ export const cancelShoppingList = async (familyId, listId) => {
 
 // Buscar itens da lista
 export const fetchShoppingListItems = async (familyId, listId) => {
-    console.log("Fetching items for list:", listId); // Log para depuração
     const response = await api.get(`/shopping-lists/${familyId}/${listId}/items`);
-    console.log("Response data:", response.data); // Log para depuração
     return response.data;
 };
 
@@ -109,6 +107,12 @@ export const deleteShoppingListItem = async (familyId, listId, itemIndex) => {
         `/shopping-lists/${familyId}/${listId}/items/${itemIndex}`
     );
     return response.data;
+};
+
+// Buscar histórico
+export const fetchHistory = async (familyId) => {
+    const response = await api.get("/shopping-lists/history", {});
+    return response.data.history || [];
 };
 
 export default api;

@@ -5,6 +5,7 @@ import Login from "../screens/Login";
 import HomeScreen from "../screens/HomeScreen";
 import FamilySettings from "../screens/FamilySettings"; // Importar a nova tela
 import ListDetailsScreen from "../screens/ListDetailsScreen"; // Importar a nova tela
+import HistoryScreen from "../screens/HistoryScreen"; // Importar a nova tela
 import { getAuthData } from "../services/storage";
 
 const Stack = createStackNavigator();
@@ -33,6 +34,7 @@ const AppNavigator = () => {
                 <Stack.Screen name="Home" component={HomeScreen} options={{ headerShown: false }} />
                 <Stack.Screen name="FamilySettings" component={FamilySettings} options={{ title: "Configurações da Família" }}/>
                 <Stack.Screen name="ListDetails" component={ListDetailsScreen} options={{ title: "Detalhes da Lista" }}/>
+                <Stack.Screen name="History" component={HistoryScreen} options={{ title: "Histórico de Listas" }}/>
             </Stack.Navigator>
         </NavigationContainer>
     );

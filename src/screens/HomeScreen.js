@@ -131,23 +131,28 @@ const HomeScreen = ({ navigation }) => {
                             }
                         >
                             <View style={styles.listItemHeader}>
-                                <View style={styles.iconContainer}>
-                                    <Svg
-                                        width="20"
-                                        height="20"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="#9b87f5"
-                                        strokeWidth={2}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                                        <Path d="M3 6h18" />
-                                        <Path d="M16 10a4 4 0 0 1-8 0" />
-                                    </Svg>
+                                <View style={{flexDirection: "row", alignItems: "center"}}>
+                                    <View style={styles.iconContainer}>
+                                        <Svg
+                                            width="20"
+                                            height="20"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="#9b87f5"
+                                            strokeWidth={2}
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                                            <Path d="M3 6h18" />
+                                            <Path d="M16 10a4 4 0 0 1-8 0" />
+                                        </Svg>
+                                    </View>
+                                    <Text style={styles.listName}>{list.nome}</Text>
                                 </View>
-                                <Text style={styles.listName}>{list.nome}</Text>
+                                <View style={styles.familyIndicator}>
+                                    <Text style={{color: "#fff"}}>{list.family_name}</Text>
+                                </View>
                             </View>
                             <View style={styles.listDetails}>
                                 <View style={styles.metaInfo}>
@@ -217,7 +222,7 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
     container: {
         flex: 1,
-        padding: 10,
+        padding: 15,
         backgroundColor: "#f9f9ff",
     },
     title: {
@@ -251,7 +256,14 @@ const styles = StyleSheet.create({
     listItemHeader: {
         flexDirection: "row",
         alignItems: "center",
+        justifyContent: "space-between",
         marginBottom: 8,
+    },
+    familyIndicator: {
+        backgroundColor: "#A7A4E0",
+        borderRadius: 10,
+        padding: 3,
+        alignSelf: "flex-start",
     },
     iconContainer: {
         backgroundColor: "rgba(155, 135, 245, 0.1)",

@@ -15,9 +15,9 @@ export const ShoppingNavBar = ({ onAdd, navigation, isDetailScreen = false }) =>
                     <Text style={[styles.navText, isActive("Home") && styles.activeText]}>Listas</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <History size={24} color="#6c757d" />
-                    <Text style={styles.navText}>Histórico</Text>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("History")}>
+                    <History size={24} color={isActive("History") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("History") && styles.activeText]}>Histórico</Text>
                 </TouchableOpacity>
 
                 <View style={styles.createButtonContainer}>
