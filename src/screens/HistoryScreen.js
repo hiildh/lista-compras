@@ -55,7 +55,7 @@ const HistoryScreen = ({ navigation }) => {
     }, [familyId]);
 
     const renderHistoryItem = ({ item }) => (
-        <View style={[styles.card, item.status === "cancelada" && styles.cancelledCard]}>
+        <View style={[styles.card, item.status === "cancelada"]}>
             <View style={styles.cardHeader}>
                 <View>
                     <Text style={styles.cardTitle}>{item.nome}</Text>
@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
         marginBottom: 16,
     },
     list: {
-        paddingBottom: 16,
+        paddingBottom: 60,
         paddingHorizontal: 10,
         paddingTop: 5,
     },
@@ -157,9 +157,6 @@ const styles = StyleSheet.create({
         shadowOpacity: 0.1,
         shadowRadius: 4,
         elevation: 2,
-    },
-    cancelledCard: {
-        backgroundColor: "#f8d7da",
     },
     cardHeader: {
         flexDirection: "row",

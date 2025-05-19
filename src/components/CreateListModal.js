@@ -13,6 +13,11 @@ const CreateListModal = ({ visible, onClose, onCreate, families }) => {
     const [listName, setListName] = useState("");
     const [selectedFamily, setSelectedFamily] = useState(families?.[0]?.id || "");
 
+    React.useEffect(() => {
+        setSelectedFamily(families?.[0]?.id || "");
+    }, [families]);
+
+
     const handleCreate = () => {
         if (!listName.trim()) {
             alert("Por favor, insira um nome para a lista.");

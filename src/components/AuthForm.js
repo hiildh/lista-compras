@@ -29,8 +29,8 @@ export const AuthForm = ({ navigation }) => {
             if (isLogin) {
                 const data = await login(email, password);
                 console.log("Login data:", data); // Log dos dados de login
-                const { access_token, family_id } = data;
-                await saveAuthData(access_token, family_id); // Salva os dados no AsyncStorage
+                const { access_token, family_id, user } = data;
+                await saveAuthData(access_token, family_id, user); // Salva os dados no AsyncStorage
                 Alert.alert("Sucesso", "Login realizado com sucesso!");
                 navigation.navigate("Home");
             } else {

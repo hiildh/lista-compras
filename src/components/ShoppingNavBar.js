@@ -40,6 +40,30 @@ export const ShoppingNavBar = ({ onAdd, navigation, isDetailScreen = false }) =>
                 </TouchableOpacity>
             </View>
         );
+    } else {
+                return (
+            <View style={styles.navbar}>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Home")}>
+                    <Home size={24} color={isActive("Home") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("Home") && styles.activeText]}>Listas</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("History")}>
+                    <History size={24} color={isActive("History") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("History") && styles.activeText]}>Histórico</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("FamilySettings")}>
+                    <Users size={24} color={isActive("FamilySettings") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("FamilySettings") && styles.activeText]}>Família</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.navItem}>
+                    <UserCircle size={24} color="#6c757d" />
+                    <Text style={styles.navText}>Perfil</Text>
+                </TouchableOpacity>
+            </View>
+        );
     }
 
     return null;

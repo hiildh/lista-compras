@@ -30,7 +30,7 @@ Certifique-se de ter instalado em sua máquina:
 
 3. **Inicie o servidor de desenvolvimento**:
     ```bash
-    npm start
+    npx expo start -c 
     # ou
     yarn start
     ```
@@ -48,7 +48,47 @@ Certifique-se de ter instalado em sua máquina:
 
 - React Native
 - Expo 
+- Firebase Realtime Database
+- Axios
+- AsyncStorage
+- React Navigation
+- React Native Gesture Handler
+
+### Funcionalidades
+
+- Cadastro e login de usuários
+- Criação, edição e exclusão de listas de compras
+- Adição e remoção de itens nas listas
+- Marcar/desmarcar itens como comprados
+- Sincronização offline/online automática
+- Gerenciamento de famílias (criar, entrar, visualizar membros)
+- Convite de membros por código ou e-mail
+- Histórico de compras
+
+### Configuração do Firebase
+
+> **Importante:** Para rodar o app, é necessário configurar o Firebase Realtime Database e as regras de segurança.  
+> Veja o arquivo `firebaseConfig.js` e adicione suas credenciais do Firebase.
+
+**Exemplo de regra para indexação:**
+```json
+"families": {
+  ".indexOn": ["code"]
+}
+```
+
+<!-- ### Variáveis de Ambiente
+
+Crie um arquivo `.env` na raiz do projeto para configurar a URL da API, se necessário:
+```
+API_URL=http://SEU_IP:8000
+``` -->
 
 ### Contribuição
 
 Sinta-se à vontade para contribuir com melhorias. Faça um fork do repositório, crie uma branch e envie um pull request.
+
+---
+
+**Dúvidas ou sugestões?**  
+Abra uma issue ou entre em contato!

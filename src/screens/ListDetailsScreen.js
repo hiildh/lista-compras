@@ -10,6 +10,7 @@ import {
     Modal,
 } from "react-native";
 import Svg, { Path, Line, Circle } from "react-native-svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
     fetchShoppingListItems,
     updateShoppingListItem,
@@ -27,8 +28,22 @@ const ListDetailsScreen = ({ route, navigation }) => {
     const [isModalVisible, setModalVisible] = useState(false);
     const [optionsModalVisible, setOptionsModalVisible] = useState(false);
     const [hideCheckedItems, setHideCheckedItems] = useState(false);
+    const [currentUser, setCurrentUser] = useState({name: ""});
 
-    const handleCancelList = () => {
+    useEffect(() => {
+        const loadUser = async () => {
+            try {
+                const userData = await AsyncStorage.getItem('user');
+                if (userData) {
+                    setCurrentUser(JSON.parse(userData));
+                }
+            } catch (error) {
+                console.error("Erro ao carregar usuário do AsyncStorage:", error);
+            }
+        };
+        loadUser();
+    }, []);
+    handleCancelList = () => {
         Alert.alert(
             "Cancelar Lista",
             "Tem certeza de que deseja cancelar esta lista?",
@@ -97,8 +112,7 @@ const ListDetailsScreen = ({ route, navigation }) => {
         try {
             setLoading(true);
             const data = await fetchShoppingListItems(familyId, listId);
-            console.log("Itens da lista:", data);
-            setItems(data.items || []);
+            setItems(data.items || data || []);
         } catch (error) {
             console.error("Erro ao carregar itens:", error);
             Alert.alert("Erro", "Não foi possível carregar os itens da lista.");
@@ -114,39 +128,59 @@ const ListDetailsScreen = ({ route, navigation }) => {
             return;
         }
         try {
-            setLoading(true);
-            await addShoppingListItems(familyId, listId, [
-                { nome: itemName, by_user: "Usuário Atual", checado: false },
-            ]);
-            setModalVisible(false);
-            loadItems(); // Recarrega os itens
+            // Adiciona o item localmente
+            const newItem = { nome: itemName, by_user: currentUser, checado: false };
+            setItems((prevItems) => [...prevItems, newItem]);
+
+            // Salva no AsyncStorage
+            const cacheKey = `shopping_list_items_${listId}`;
+            let cached = await AsyncStorage.getItem(cacheKey);
+            let items = [];
+            if (cached) {
+                try {
+                    const parsed = JSON.parse(cached);
+                    if (Array.isArray(parsed)) {
+                        items = parsed;
+                    } else if (parsed && Array.isArray(parsed.items)) {
+                        items = parsed.items;
+                    }
+                } catch (e) {}
+            }
+            const updatedItems = [...items, newItem];
+            await AsyncStorage.setItem(cacheKey, JSON.stringify({ items: updatedItems }));
+
+            // Tenta sincronizar com o servidor
+            await addShoppingListItems(familyId, listId, [newItem]);
         } catch (error) {
             console.error("Erro ao adicionar item:", error);
-            Alert.alert("Erro", "Não foi possível adicionar o item.");
-        } finally {
-            setLoading(false);
+            Alert.alert("Erro", "Não foi possível sincronizar o item.");
         }
     };
 
     // Função para marcar um item como concluído
     const toggleItemCheck = async (itemIndex, currentChecked) => {
         try {
-            setLoading(true);
-            await updateShoppingListItem(familyId, listId, itemIndex, {
-                checado: !currentChecked,
-            });
-
             // Atualiza o estado local diretamente
             setItems((prevItems) =>
                 prevItems.map((item, index) =>
                     index === itemIndex ? { ...item, checado: !currentChecked } : item
                 )
             );
+
+            // Salva a alteração no AsyncStorage
+            const cacheKey = `shopping_list_items_${listId}`;
+            const updatedItems = items.map((item, index) =>
+                index === itemIndex ? { ...item, checado: !currentChecked } : item
+            );
+            await AsyncStorage.setItem(cacheKey, JSON.stringify(updatedItems));
+
+            // Tenta sincronizar com o servidor
+            await updateShoppingListItem(familyId, listId, itemIndex, {
+                checado: !currentChecked,
+            });
         } catch (error) {
             console.error("Erro ao atualizar item:", error);
-            Alert.alert("Erro", "Não foi possível atualizar o item.");
-        } finally {
-            setLoading(false);
+            Alert.alert("Erro", "Não foi possível sincronizar a alteração.");
         }
     };
 

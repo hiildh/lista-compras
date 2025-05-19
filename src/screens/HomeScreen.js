@@ -1,39 +1,41 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, Alert, TextInput, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Alert, TextInput, TouchableOpacity, FlatList, RefreshControl } from "react-native";
 import Svg, { Path, Circle, Rect } from "react-native-svg";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ShoppingNavBar } from "../components/ShoppingNavBar";
 import CreateListModal from "../components/CreateListModal";
-import { fetchFamilies, fetchShoppingLists, createShoppingList } from "../services/api";
+import { fetchFamilies, fetchShoppingLists, createShoppingList, deleteShoppingList } from "../services/api";
 import { useFocusEffect } from "@react-navigation/native";
+import { Swipeable } from 'react-native-gesture-handler';
 
 const HomeScreen = ({ navigation }) => {
     const [isModalVisible, setModalVisible] = useState(false);
     const [families, setFamilies] = useState([]);
     const [shoppingLists, setShoppingLists] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
 
-    // Função para carregar as famílias
-    const loadFamilies = async () => {
-        try {
-            setLoading(true);
-            const data = await fetchFamilies();
-            const parsedData = JSON.parse(data);
-            setFamilies(Array.isArray(parsedData.families) ? parsedData.families : []);
-        } catch (error) {
-            console.error("Erro ao buscar famílias:", error);
-            Alert.alert("Erro", "Não foi possível carregar as famílias.");
-            setFamilies([]);
-        } finally {
-            setLoading(false);
-        }
-    };
-
     // Função para carregar as listas de compras
-    const loadShoppingLists = async (familyId) => {
+    const loadShoppingLists = async (familyId, forceUpdate = false) => {
         if (!familyId) return;
         try {
             setLoading(true);
+
+            // Limpa a lista de compras antes de carregar novas
+            const cacheKey = `shopping_lists_${familyId}`;
+            if (!forceUpdate) {
+                // Tente buscar do cache
+                const cachedData = await AsyncStorage.getItem(cacheKey);
+                if (cachedData) {
+                    console.log("Usando dados do cache para listas de compras.");
+                    setShoppingLists(Object.values(JSON.parse(cachedData).lists));
+                    return;
+                }
+            }
+            // Limpa o cache antes de salvar novos dados
+            await AsyncStorage.removeItem(cacheKey);
+            // Busca os dados da API
             const data = await fetchShoppingLists(familyId, searchQuery);
             setShoppingLists(Object.values(data.lists));
         } catch (error) {
@@ -42,6 +44,18 @@ const HomeScreen = ({ navigation }) => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Função para recarregar as listas (Pull to Refresh)
+    const onRefresh = async () => {
+        setRefreshing(true);
+        if (families.length > 0) {
+            const uniqueFamilyIds = [...new Set(families.map((family) => family.id))];
+            for (const familyId of uniqueFamilyIds) {
+                await loadShoppingLists(familyId, true); // Força a atualização
+            }
+        }
+        setRefreshing(false);
     };
 
     // Carregar dados ao focar na tela
@@ -81,18 +95,87 @@ const HomeScreen = ({ navigation }) => {
     // Função para criar uma nova lista
     const handleCreateList = async (newList) => {
         try {
-            setLoading(true);
-            await createShoppingList(newList.name, newList.familyId);
-            Alert.alert("Sucesso", "Lista criada com sucesso!");
-            loadShoppingLists(newList.familyId);
+            // Tenta criar a lista no servidor primeiro para verificar conectividade
+            let response;
+            let isOffline = false;
+            try {
+                response = await createShoppingList(newList.name, newList.familyId);
+            } catch (e) {
+                isOffline = true;
+            }
+
+            const tempId = (isOffline ? "temp-" : "") + Date.now().toString();
+
+            const newListData = {
+                id: isOffline ? tempId : response?.id,
+                nome: newList.name,
+                familia: newList.familyId,
+                itens: [],
+                data: new Date().toISOString(),
+                usuarios_vinculados_lista: [],
+                family_name: families.find((family) => family.id === newList.familyId)?.name || "",
+                status: "incompleta",
+            };
+            setShoppingLists((prevLists) => [newListData, ...prevLists]);
+
+            // Salva no AsyncStorage
+            const cacheKey = `shopping_lists_${newList.familyId}`;
+            let cachedLists = [];
+            const cachedRaw = await AsyncStorage.getItem(cacheKey);
+            if (cachedRaw) {
+                try {
+                    const parsed = JSON.parse(cachedRaw);
+                    cachedLists = Array.isArray(parsed) ? parsed : Object.values(parsed.lists || {});
+                } catch (e) {
+                    cachedLists = [];
+                }
+            }
+            await AsyncStorage.setItem(cacheKey, JSON.stringify([newListData, ...cachedLists]));
+
+            // Se estava offline, não tenta atualizar o ID
+            if (!isOffline && response?.id) {
+                setShoppingLists((prevLists) =>
+                    prevLists.map((list) =>
+                        list.id === tempId ? { ...list, id: response.id } : list
+                    )
+                );
+            }
         } catch (error) {
             console.error("Erro ao criar lista:", error);
-            Alert.alert("Erro", "Não foi possível criar a lista.");
-        } finally {
-            setLoading(false);
-            setModalVisible(false);
+            Alert.alert("Erro", "Não foi possível sincronizar a lista.");
         }
     };
+
+    const handleDeleteList = async (item) => {
+        try {
+            // Chame sua função de exclusão
+            await deleteShoppingList(item.familia, item.id);
+            // Remova do estado local
+            setShoppingLists((prev) => prev.filter((list) => list.id !== item.id));
+        } catch (error) {
+            Alert.alert("Erro", "Não foi possível excluir a lista.");
+        }
+    };
+
+    const renderRightActions = (progress, dragX, onDelete) => (
+        <TouchableOpacity
+            style={{
+                backgroundColor: '#DA291C',
+                justifyContent: 'center',
+                alignItems: 'center',
+                width: 70,
+                height: '90%',
+                borderRadius: 8,
+            }}
+            onPress={onDelete}
+        >
+            <Svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2}>
+                <Path d="M3 6h18" />
+                <Path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <Path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+            </Svg>
+        </TouchableOpacity>
+    );
 
     return (
         <View style={styles.container}>
@@ -115,86 +198,99 @@ const HomeScreen = ({ navigation }) => {
             {loading ? (
                 <ActivityIndicator size="large" color="#9b87f5" />
             ) : shoppingLists.length > 0 ? (
-                <View>
-                    {shoppingLists.map((list, index) => (
-                        <TouchableOpacity
-                            key={list.id || index}
-                            style={styles.listItem}
-                            onPress={() =>
-                                console.log("List clicked:", list) ||
-                                navigation.navigate("ListDetails", {
-                                    familyId: list.familia,
-                                    listId: list.id,
-                                    listName: list.nome,
-                                    collaborators: list.usuarios_vinculados_lista || [],
-                                })
+                <FlatList
+                    style={styles.list}
+                    data={shoppingLists.filter((list) => list && list.nome)} // Filtra listas inválidas
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={({ item }) => (
+                        <Swipeable
+                            renderRightActions={(progress, dragX) =>
+                                renderRightActions(progress, dragX, () => handleDeleteList(item))
                             }
+                            overshootRight={false}
                         >
-                            <View style={styles.listItemHeader}>
-                                <View style={{flexDirection: "row", alignItems: "center"}}>
-                                    <View style={styles.iconContainer}>
+                            <TouchableOpacity
+                                style={styles.listItem}
+                                onPress={() =>
+                                    navigation.navigate("ListDetails", {
+                                        familyId: item.familia,
+                                        listId: item.id,
+                                        listName: item.nome,
+                                        collaborators: item.usuarios_vinculados_lista || [],
+                                    })
+                                }
+                            >
+                                <View style={styles.listItemHeader}>
+                                    <View style={{ flexDirection: "row", alignItems: "center", overflow: "hidden" }}>
+                                        <View style={styles.iconContainer}>
+                                            <Svg
+                                                width="20"
+                                                height="20"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="#9b87f5"
+                                                strokeWidth={2}
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                            >
+                                                <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                                                <Path d="M3 6h18" />
+                                                <Path d="M16 10a4 4 0 0 1-8 0" />
+                                            </Svg>
+                                        </View>
+                                        <Text style={styles.listName}>{item.nome}</Text>
+                                    </View>
+                                    <View style={styles.familyIndicator}>
+                                        <Text style={{ color: "#fff" }}>{item.family_name}</Text>
+                                    </View>
+                                </View>
+                                <View style={styles.listDetails}>
+                                    <View style={styles.metaInfo}>
                                         <Svg
-                                            width="20"
-                                            height="20"
+                                            width="14"
+                                            height="14"
                                             viewBox="0 0 24 24"
                                             fill="none"
-                                            stroke="#9b87f5"
+                                            stroke="#6E7CA0"
                                             strokeWidth={2}
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
                                         >
-                                            <Path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                                            <Path d="M3 6h18" />
-                                            <Path d="M16 10a4 4 0 0 1-8 0" />
+                                            <Path d="M8 2v4" />
+                                            <Path d="M16 2v4" />
+                                            <Rect x="3" y="4" width="18" height="18" rx="2" />
+                                            <Path d="M3 10h18" />
                                         </Svg>
+                                        <Text style={styles.listDate}>{new Date(item.data).toLocaleDateString()}</Text>
                                     </View>
-                                    <Text style={styles.listName}>{list.nome}</Text>
+                                    <View style={styles.metaInfo}>
+                                        <Svg
+                                            width="14"
+                                            height="14"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="#000"
+                                            strokeWidth={2}
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                        >
+                                            <Path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                            <Circle cx="9" cy="7" r="4" />
+                                            <Path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                                            <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                                        </Svg>
+                                        <Text style={styles.listMembers}>
+                                            {Object.keys(item.usuarios_vinculados_lista || {}).length} membros
+                                        </Text>
+                                    </View>
                                 </View>
-                                <View style={styles.familyIndicator}>
-                                    <Text style={{color: "#fff"}}>{list.family_name}</Text>
-                                </View>
-                            </View>
-                            <View style={styles.listDetails}>
-                                <View style={styles.metaInfo}>
-                                    <Svg
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="#6E7CA0"
-                                        strokeWidth={2}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <Path d="M8 2v4" />
-                                        <Path d="M16 2v4" />
-                                        <Rect x="3" y="4" width="18" height="18" rx="2" />
-                                        <Path d="M3 10h18" />
-                                    </Svg>
-                                    <Text style={styles.listDate}>{new Date(list.data).toLocaleDateString()}</Text>
-                                </View>
-                                <View style={styles.metaInfo}>
-                                    <Svg
-                                        width="14"
-                                        height="14"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="#000"
-                                        strokeWidth={2}
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                    >
-                                        <Path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                                        <Circle cx="9" cy="7" r="4" />
-                                        <Path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                                        <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                    </Svg>
-                                    <Text style={styles.listMembers}>{Object.keys(list.usuarios_vinculados_lista).length} membros</Text>
-                                </View>
-                            </View>
-                        </TouchableOpacity>
-                    ))}
-                </View>
+                            </TouchableOpacity>
+                        </Swipeable>
+                    )}
+                    refreshControl={
+                        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+                    }
+                />
             ) : (
                 <View style={styles.emptyContainer}>
                     <Text style={styles.emptyText}>Nenhuma lista encontrada.</Text>
@@ -241,6 +337,10 @@ const styles = StyleSheet.create({
         marginBottom: 16,
         backgroundColor: "#fff",
     },
+    list: {
+        flex: 1,
+        marginBottom: 50,
+    },
     listItem: {
         backgroundColor: "#fff",
         borderRadius: 8,
@@ -275,6 +375,11 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
         color: "#333",
+        // adicionar um truncate para o texto
+        whiteSpace: "normal",
+        maxWidth: "80%",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
     },
     listDetails: {
         flexDirection: "row",

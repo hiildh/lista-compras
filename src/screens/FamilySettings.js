@@ -1,141 +1,208 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ScrollView, Alert, ActivityIndicator } from "react-native";
 import { ShoppingNavBar } from "../components/ShoppingNavBar";
 import { Plus, X, ArrowRight } from "lucide-react-native";
+import { fetchFamilies, fetchFamilyMembers, joinFamily } from "../services/api";
+import * as Clipboard from "expo-clipboard";
 
 const FamilySettings = ({ navigation }) => {
-    const [familyCode, setFamilyCode] = useState("FAM-123456");
+    const [familyCode, setFamilyCode] = useState("");
     const [inviteEmail, setInviteEmail] = useState("");
     const [joinCode, setJoinCode] = useState("");
-    const [familyMembers, setFamilyMembers] = useState([
-        {
-        id: "1",
-        name: "João Silva",
-        email: "joao@example.com",
-        },
-        {
-        id: "2",
-        name: "Maria Oliveira",
-        email: "maria@example.com",
-        },
-    ]);
+    const [familyMembers, setFamilyMembers] = useState([]);
+    const [families, setFamilies] = useState([]);
+    const [selectedFamily, setSelectedFamily] = useState(null);
+    const [currentUserId, setCurrentUserId] = useState("");
+    const [loadingFamilies, setLoadingFamilies] = useState(true);
+    const [loadingMembers, setLoadingMembers] = useState(false);
+
+    useEffect(() => {
+        const loadFamilies = async () => {
+            setLoadingFamilies(true);
+            try {
+                const res = await fetchFamilies();
+                const parsed = JSON.parse(res);
+                setFamilies(parsed.families || []);
+                if (parsed.families && parsed.families.length > 0) {
+                    setSelectedFamily(parsed.families[0]);
+                    setFamilyCode(parsed.families[0].code || "");
+                    setCurrentUserId(parsed.families[0].owner || "");
+                }
+            } catch (e) {
+                Alert.alert("Erro", "Não foi possível carregar as famílias.");
+            } finally {
+                setLoadingFamilies(false);
+            }
+        };
+        loadFamilies();
+    }, []);
+
+    useEffect(() => {
+        const loadMembers = async () => {
+            if (!selectedFamily) return;
+            setLoadingMembers(true);
+            try {
+                const res = await fetchFamilyMembers(selectedFamily.id);
+                setFamilyMembers(Object.values(res.members || {}));
+                setFamilyCode(selectedFamily.code || "");
+                if (selectedFamily.owner) setCurrentUserId(selectedFamily.owner);
+            } catch (e) {
+                setFamilyMembers([]);
+            } finally {
+                setLoadingMembers(false);
+            }
+        };
+        loadMembers();
+    }, [selectedFamily]);
 
     const handleInvite = () => {
-        if (!inviteEmail) {
-        Alert.alert("Erro", "Por favor, insira um email válido.");
-        return;
+        if (!inviteEmail.trim()) {
+            Alert.alert("Erro", "Por favor, insira um email válido.");
+            return;
         }
         Alert.alert("Convite enviado", `Convite enviado para ${inviteEmail}`);
         setInviteEmail("");
     };
 
-    const handleJoinFamily = () => {
-        if (!joinCode) {
+    const handleJoinFamily = async () => {
+        if (!joinCode.trim()) {
             Alert.alert("Erro", "Por favor, insira um código de família válido.");
             return;
         }
-        Alert.alert("Família encontrada", `Você foi adicionado à família com o código ${joinCode}`);
-        setJoinCode("");
+        try {
+            setLoadingFamilies(true);
+            await joinFamily(joinCode);
+            Alert.alert("Sucesso", "Você entrou na família!");
+            setJoinCode("");
+            const res = await fetchFamilies();
+            const parsed = JSON.parse(res);
+            setFamilies(parsed.families || []);
+            if (parsed.families && parsed.families.length > 0) {
+                setSelectedFamily(parsed.families[0]);
+                setFamilyCode(parsed.families[0].code || "");
+                setCurrentUserId(parsed.families[0].owner || "");
+            }
+        } catch (e) {
+            Alert.alert("Erro", "Não foi possível entrar na família.");
+        } finally {
+            setLoadingFamilies(false);
+        }
     };
 
     const handleRemoveMember = (id) => {
+        if (!id) return;
         setFamilyMembers(familyMembers.filter((member) => member.id !== id));
         Alert.alert("Membro removido", "Membro removido da família com sucesso.");
     };
 
+    const handleCopyCode = async () => {
+        if (!familyCode.trim()) {
+            Alert.alert("Erro", "Nenhum código para copiar.");
+            return;
+        }
+        await Clipboard.setStringAsync(familyCode);
+        Alert.alert("Código copiado", "Código copiado para a área de transferência.");
+    };
+
     return (
         <View style={styles.container}>
-        <ScrollView contentContainerStyle={styles.contentContainer}>
-            <Text style={styles.title}>Configurações da Família</Text>
+            <ScrollView contentContainerStyle={styles.contentContainer}>
+                {loadingFamilies ? (
+                    <ActivityIndicator size="large" color="#9b87f5" style={{ marginVertical: 32 }} />
+                ) : (
+                    <>
+                        {families.length > 1 && (
+                            <ScrollView horizontal style={{ marginBottom: 16 }}>
+                                {families.map(fam => (
+                                    <TouchableOpacity
+                                        key={fam.id}
+                                        style={[
+                                            styles.buttonOutline,
+                                            selectedFamily?.id === fam.id && { backgroundColor: "#9b87f5" }
+                                        ]}
+                                        onPress={() => setSelectedFamily(fam)}
+                                    >
+                                        <Text style={{ color: selectedFamily?.id === fam.id ? "#fff" : "#9b87f5" }}>
+                                            {fam.name}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </ScrollView>
+                        )}
 
-            {/* Código da Família */}
-            <View style={styles.card}>
-            <Text style={styles.cardTitle}>Código da Família</Text>
-            <Text style={styles.cardDescription}>
-                Compartilhe este código para convidar pessoas para sua família
-            </Text>
-            <View style={styles.row}>
-                <TextInput
-                style={[styles.input, styles.readOnlyInput]}
-                value={familyCode}
-                editable={false}
-                />
-                <TouchableOpacity
-                style={styles.buttonOutline}
-                onPress={() => {
-                    Alert.alert("Código copiado", "Código copiado para a área de transferência.");
-                }}
-                >
-                <Text style={styles.buttonText}>Copiar</Text>
-                </TouchableOpacity>
-            </View>
-            </View>
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>Código da Família</Text>
+                            <Text style={styles.cardDescription}>
+                                Compartilhe este código para convidar pessoas para sua família
+                            </Text>
+                            <View style={styles.row}>
+                                <TextInput
+                                    style={[styles.input, styles.readOnlyInput]}
+                                    value={familyCode}
+                                    editable={false}
+                                />
+                                <TouchableOpacity
+                                    style={styles.buttonOutline}
+                                    onPress={handleCopyCode}
+                                >
+                                    <Text style={styles.buttonText}>Copiar</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
-            {/* Entrar em uma Família */}
-            <View style={styles.card}>
-            <Text style={styles.cardTitle}>Entrar em uma Família</Text>
-            <Text style={styles.cardDescription}>
-                Insira o código da família que deseja participar
-            </Text>
-            <View style={styles.row}>
-                <TextInput
-                style={styles.input}
-                placeholder="Código da família"
-                value={joinCode}
-                onChangeText={setJoinCode}
-                />
-                <TouchableOpacity style={styles.buttonOutline} onPress={handleJoinFamily}>
-                <ArrowRight size={18} color="#6c757d" />
-                </TouchableOpacity>
-            </View>
-            </View>
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>Entrar em uma Família</Text>
+                            <Text style={styles.cardDescription}>
+                                Insira o código da família que deseja participar
+                            </Text>
+                            <View style={styles.row}>
+                                <TextInput
+                                    style={styles.input}
+                                    placeholder="Código da família"
+                                    value={joinCode}
+                                    onChangeText={setJoinCode}
+                                />
+                                <TouchableOpacity style={styles.buttonOutline} onPress={handleJoinFamily}>
+                                    <ArrowRight size={18} color="#9b87f5" />
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
-            {/* Convidar Membro */}
-            <View style={styles.card}>
-            <Text style={styles.cardTitle}>Convidar Membro</Text>
-            <Text style={styles.cardDescription}>Envie um convite por email</Text>
-            <View style={styles.row}>
-                <TextInput
-                style={styles.input}
-                placeholder="Email"
-                value={inviteEmail}
-                onChangeText={setInviteEmail}
-                />
-                <TouchableOpacity style={styles.buttonDefault} onPress={handleInvite}>
-                <Plus size={18} color="#fff" />
-                </TouchableOpacity>
-            </View>
-            </View>
-
-            {/* Membros da Família */}
-            <View style={styles.card}>
-            <Text style={styles.cardTitle}>Membros da Família</Text>
-            <Text style={styles.cardDescription}>Gerenciar membros da família</Text>
-            {familyMembers.map((member) => (
-                <View key={member.id} style={styles.memberRow}>
-                <View style={styles.memberInfo}>
-                    <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                        {member.name.substring(0, 2).toUpperCase()}
-                    </Text>
-                    </View>
-                    <View>
-                    <Text style={styles.memberName}>{member.name}</Text>
-                    <Text style={styles.memberEmail}>{member.email}</Text>
-                    </View>
-                </View>
-                <TouchableOpacity
-                    style={styles.removeButton}
-                    onPress={() => handleRemoveMember(member.id)}
-                >
-                    <X size={18} color="#ef4444" />
-                </TouchableOpacity>
-                </View>
-            ))}
-            </View>
-        </ScrollView>
-
-        <ShoppingNavBar navigation={navigation} />
+                        <View style={styles.card}>
+                            <Text style={styles.cardTitle}>Membros da Família</Text>
+                            <Text style={styles.cardDescription}>Gerenciar membros da família</Text>
+                            {loadingMembers ? (
+                                <ActivityIndicator size="small" color="#9b87f5" style={{ marginVertical: 16 }} />
+                            ) : (
+                                familyMembers.map((member) => (
+                                    <View key={member.id} style={styles.memberRow}>
+                                        <View style={styles.memberInfo}>
+                                            <View style={styles.avatar}>
+                                                <Text style={styles.avatarText}>
+                                                    {member.name.substring(0, 2).toUpperCase()}
+                                                </Text>
+                                            </View>
+                                            <View>
+                                                <Text style={styles.memberName}>{member.name}</Text>
+                                                <Text style={styles.memberEmail}>{member.email}</Text>
+                                            </View>
+                                        </View>
+                                        {member.id !== currentUserId && (
+                                            <TouchableOpacity
+                                                style={styles.removeButton}
+                                                onPress={() => handleRemoveMember(member.id)}
+                                            >
+                                                <X size={18} color="#ef4444" />
+                                            </TouchableOpacity>
+                                        )}
+                                    </View>
+                                ))
+                            )}
+                        </View>
+                    </>
+                )}
+            </ScrollView>
+            <ShoppingNavBar navigation={navigation} isDetailScreen={true} />
         </View>
     );
 };

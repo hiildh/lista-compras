@@ -2,12 +2,14 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const TOKEN_KEY = "access_token";
 const FAMILY_ID_KEY = "family_id";
+const User = "user";
 
-export const saveAuthData = async (token, familyId) => {
+export const saveAuthData = async (token, familyId, user) => {
     try {
         await AsyncStorage.multiSet([
             [TOKEN_KEY, token],
             [FAMILY_ID_KEY, familyId],
+            [User, JSON.stringify(user)],
         ]);
     } catch (error) {
         console.error("Erro ao salvar dados de autenticação:", error);
