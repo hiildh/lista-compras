@@ -241,7 +241,7 @@ const HomeScreen = ({ navigation }) => {
                                         <Text style={styles.listName}>{item.nome}</Text>
                                     </View>
                                     <View style={styles.familyIndicator}>
-                                        <Text style={{ color: "#fff" }}>{item.family_name}</Text>
+                                        <Text style={{ color: "#fff" }}>{item.family_name.split(" ").slice(0, 3).join(" ")}</Text>
                                     </View>
                                 </View>
                                 <View style={styles.listDetails}>

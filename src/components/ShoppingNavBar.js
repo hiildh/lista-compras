@@ -34,9 +34,9 @@ export const ShoppingNavBar = ({ onAdd, navigation, isDetailScreen = false }) =>
                     <Text style={[styles.navText, isActive("FamilySettings") && styles.activeText]}>Família</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <UserCircle size={24} color="#6c757d" />
-                    <Text style={styles.navText}>Perfil</Text>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Profile")}>
+                    <UserCircle size={24} color={isActive("Profile") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("Profile") && styles.activeText]}>Perfil</Text>
                 </TouchableOpacity>
             </View>
         );
@@ -58,9 +58,9 @@ export const ShoppingNavBar = ({ onAdd, navigation, isDetailScreen = false }) =>
                     <Text style={[styles.navText, isActive("FamilySettings") && styles.activeText]}>Família</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.navItem}>
-                    <UserCircle size={24} color="#6c757d" />
-                    <Text style={styles.navText}>Perfil</Text>
+                <TouchableOpacity style={styles.navItem} onPress={() => navigation.navigate("Profile")}>
+                    <UserCircle size={24} color={isActive("Profile") ? "#9b87f5" : "#6c757d"} />
+                    <Text style={[styles.navText, isActive("Profile") && styles.activeText]}>Perfil</Text>
                 </TouchableOpacity>
             </View>
         );
