@@ -18,7 +18,7 @@ NetInfo.addEventListener(async (state) => {
             );
             const familyId = await AsyncStorage.getItem("family_id");
             if (familyId) {
-                // await syncData(familyId);
+                await syncData(familyId);
             } else {
                 console.warn("familyId não encontrado para sincronização.");
             }

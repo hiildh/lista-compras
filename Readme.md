@@ -55,15 +55,26 @@ Certifique-se de ter instalado em sua máquina:
 - React Native Gesture Handler
 
 ### Funcionalidades
+### Principais Funcionalidades
 
-- Cadastro e login de usuários
-- Criação, edição e exclusão de listas de compras
-- Adição e remoção de itens nas listas
-- Marcar/desmarcar itens como comprados
-- Sincronização offline/online automática
-- Gerenciamento de famílias (criar, entrar, visualizar membros)
-- Convite de membros por código ou e-mail
-- Histórico de compras
+#### Gerenciamento de Listas
+- Criar, editar e excluir listas de compras.
+- Adicionar e remover itens nas listas.
+- Marcar/desmarcar itens como comprados.
+- Cancelar listas.
+
+#### Sincronização em Tempo Real
+- Atualização automática de listas e itens entre dispositivos usando o Firebase.
+
+#### Histórico de Compras
+- Visualizar listas concluídas ou canceladas.
+
+#### Gerenciamento de Famílias
+- Criar e gerenciar famílias.
+- Compartilhar listas entre membros da família.
+
+#### Suporte Offline
+- Armazenamento local com sincronização automática quando a conexão é restabelecida.
 
 ### Configuração do Firebase
 
