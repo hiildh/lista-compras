@@ -7,6 +7,8 @@ import CreateListModal from "../components/CreateListModal";
 import { fetchFamilies, fetchShoppingLists, createShoppingList, deleteShoppingList } from "../services/api";
 import { useFocusEffect } from "@react-navigation/native";
 import { Swipeable } from 'react-native-gesture-handler';
+import { db } from "../../firebaseConfig";
+import { ref, onValue, off } from "firebase/database";
 
 const HomeScreen = ({ navigation }) => {
     const [isModalVisible, setModalVisible] = useState(false);
@@ -91,6 +93,35 @@ const HomeScreen = ({ navigation }) => {
             fetchInitialData();
         }, [searchQuery]) // Apenas `searchQuery` como dependência
     );
+
+    // Efeito para sincronizar listas de compras em tempo real com o Firebase
+    useEffect(() => {
+        if (!families.length) return;
+
+        // Para cada família, adiciona um listener
+        const listeners = families.map((family) => {
+            const listsRef = ref(db, `shopping_lists/${family.id}`);
+            const handleValueChange = (snapshot) => {
+                const data = snapshot.val() || {};
+                // Se for objeto, transforma em array
+                const listsArray = Object.values(data).filter(Boolean);
+                setShoppingLists((prev) => {
+                    // Atualiza apenas as listas dessa família, mantendo as de outras famílias
+                    const otherFamilies = prev.filter(list => list.familia !== family.id);
+                    return [...otherFamilies, ...listsArray];
+                });
+            };
+            onValue(listsRef, handleValueChange);
+            return { listsRef, handleValueChange };
+        });
+
+        // Cleanup: remove todos os listeners ao desmontar ou trocar famílias
+        return () => {
+            listeners.forEach(({ listsRef, handleValueChange }) => {
+                off(listsRef, "value", handleValueChange);
+            });
+        };
+    }, [families]);
 
     // Função para criar uma nova lista
     const handleCreateList = async (newList) => {
@@ -200,8 +231,8 @@ const HomeScreen = ({ navigation }) => {
             ) : shoppingLists.length > 0 ? (
                 <FlatList
                     style={styles.list}
-                    data={shoppingLists.filter((list) => list && list.nome)} // Filtra listas inválidas
-                    keyExtractor={(item) => item.id.toString()}
+                    data={shoppingLists.filter((list) => list && list.id)} // Filtra listas inválidas
+                    keyExtractor={(item, index) => (item && item.id ? item.id.toString() : index.toString())}
                     renderItem={({ item }) => (
                         <Swipeable
                             renderRightActions={(progress, dragX) =>
@@ -238,7 +269,7 @@ const HomeScreen = ({ navigation }) => {
                                                 <Path d="M16 10a4 4 0 0 1-8 0" />
                                             </Svg>
                                         </View>
-                                        <Text style={styles.listName}>{item.nome}</Text>
+                                        <Text style={styles.listName} numberOfLines={1} ellipsizeMode="tail">{item.nome}</Text>
                                     </View>
                                     <View style={styles.familyIndicator}>
                                         <Text style={{ color: "#fff" }}>{item.family_name.split(" ").slice(0, 3).join(" ")}</Text>
@@ -362,8 +393,10 @@ const styles = StyleSheet.create({
     familyIndicator: {
         backgroundColor: "#A7A4E0",
         borderRadius: 10,
-        padding: 3,
+        paddingHorizontal: 8,
+        paddingVertical: 3,
         alignSelf: "flex-start",
+        maxWidth: 120,
     },
     iconContainer: {
         backgroundColor: "rgba(155, 135, 245, 0.1)",
@@ -375,11 +408,8 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: "bold",
         color: "#333",
-        // adicionar um truncate para o texto
-        whiteSpace: "normal",
-        maxWidth: "80%",
-        overflow: "hidden",
-        textOverflow: "ellipsis",
+        maxWidth: 170, // Valor fixo para evitar empurrar a tag
+        flexShrink: 1,
     },
     listDetails: {
         flexDirection: "row",

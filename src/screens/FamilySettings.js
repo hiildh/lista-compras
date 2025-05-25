@@ -4,6 +4,8 @@ import { ShoppingNavBar } from "../components/ShoppingNavBar";
 import { Plus, X, ArrowRight } from "lucide-react-native";
 import { fetchFamilies, fetchFamilyMembers, joinFamily } from "../services/api";
 import * as Clipboard from "expo-clipboard";
+import { db } from "../../firebaseConfig";
+import { ref, onValue, off } from "firebase/database";
 
 const FamilySettings = ({ navigation }) => {
     const [familyCode, setFamilyCode] = useState("");
@@ -53,6 +55,27 @@ const FamilySettings = ({ navigation }) => {
             }
         };
         loadMembers();
+    }, [selectedFamily]);
+
+    useEffect(() => {
+        if (!selectedFamily) return;
+
+        // Referência para os membros da família no Realtime Database
+        const membersRef = ref(db, `families/${selectedFamily.id}/members`);
+
+        // Função que será chamada sempre que houver mudança
+        const handleValueChange = (snapshot) => {
+            const data = snapshot.val() || {};
+            setFamilyMembers(Object.values(data));
+        };
+
+        // Adiciona o listener
+        onValue(membersRef, handleValueChange);
+
+        // Remove o listener ao desmontar ou trocar de família
+        return () => {
+            off(membersRef, "value", handleValueChange);
+        };
     }, [selectedFamily]);
 
     const handleInvite = () => {
@@ -206,7 +229,7 @@ const FamilySettings = ({ navigation }) => {
         </View>
     );
 };
-
+// Verificar pusher do firebase para modificar o estado de novos membros
 const styles = StyleSheet.create({
     container: {
         flex: 1,

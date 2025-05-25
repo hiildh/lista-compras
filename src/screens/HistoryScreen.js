@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ActivityIndicator, FlatList, Alert } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, FlatList, Alert, TouchableOpacity } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Svg, { Path, Circle, Rect } from "react-native-svg";
 import { fetchHistory } from "../services/api";
@@ -55,58 +55,70 @@ const HistoryScreen = ({ navigation }) => {
     }, [familyId]);
 
     const renderHistoryItem = ({ item }) => (
-        <View style={[styles.card, item.status === "cancelada"]}>
-            <View style={styles.cardHeader}>
-                <View>
-                    <Text style={styles.cardTitle}>{item.nome}</Text>
-                    <Text style={styles.familyName}>{item.family_name || "Família desconhecida"}</Text>
-                </View>
-                <Text style={[styles.status, item.status === "cancelada" ? styles.cancelledStatus : styles.completedStatus]}>
-                    {item.status === "cancelada" ? "Cancelada" : "Concluída"}
-                </Text>
-            </View>
-            <Text style={styles.cardItems}>{item.itens?.length || 0} itens</Text>
-            <View style={styles.cardDetails}>
-                <View style={styles.metaInfo}>
-                    <Svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#6E7CA0"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
-                        <Path d="M8 2v4" />
-                        <Path d="M16 2v4" />
-                        <Rect x="3" y="4" width="18" height="18" rx="2" />
-                        <Path d="M3 10h18" />
-                    </Svg>
-                    <Text style={styles.cardDate}>{new Date(item.data).toLocaleDateString()}</Text>
-                </View>
-                <View style={styles.metaInfo}>
-                    <Svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#000"
-                        strokeWidth={2}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                    >
-                        <Path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <Circle cx="9" cy="7" r="4" />
-                        <Path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                        <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </Svg>
-                    <Text style={styles.cardDetailsText}>
-                        Por: {item.by_user?.name || "Desconhecido"}
+        <TouchableOpacity
+            onPress={() =>
+                navigation.navigate("ListDetails", {
+                    familyId: item.familia,
+                    listId: item.id,
+                    listName: item.nome,
+                    collaborators: item.usuarios_vinculados_lista || [],
+                    fromHistory: true, // <-- Adicione isso!
+                })
+            }
+        >
+            <View style={[styles.card, item.status === "cancelada"]}>
+                <View style={styles.cardHeader}>
+                    <View>
+                        <Text style={styles.cardTitle}>{item.nome}</Text>
+                        <Text style={styles.familyName}>{item.family_name || "Família desconhecida"}</Text>
+                    </View>
+                    <Text style={[styles.status, item.status === "cancelada" ? styles.cancelledStatus : styles.completedStatus]}>
+                        {item.status === "cancelada" ? "Cancelada" : "Concluída"}
                     </Text>
                 </View>
+                <Text style={styles.cardItems}>{item.itens?.length || 0} itens</Text>
+                <View style={styles.cardDetails}>
+                    <View style={styles.metaInfo}>
+                        <Svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#6E7CA0"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <Path d="M8 2v4" />
+                            <Path d="M16 2v4" />
+                            <Rect x="3" y="4" width="18" height="18" rx="2" />
+                            <Path d="M3 10h18" />
+                        </Svg>
+                        <Text style={styles.cardDate}>{new Date(item.data).toLocaleDateString()}</Text>
+                    </View>
+                    <View style={styles.metaInfo}>
+                        <Svg
+                            width="14"
+                            height="14"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#000"
+                            strokeWidth={2}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            <Path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                            <Circle cx="9" cy="7" r="4" />
+                            <Path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                            <Path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </Svg>
+                        <Text style={styles.cardDetailsText}>
+                            Por: {item.by_user?.name || "Desconhecido"}
+                        </Text>
+                    </View>
+                </View>
             </View>
-        </View>
+        </TouchableOpacity>
     );
 
     return (

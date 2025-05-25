@@ -17,18 +17,25 @@ import {
     deleteShoppingListItem,
     cancelShoppingList,
     addShoppingListItems,
+    fetchItemDetails,
 } from "../services/api";
 import CreateItemModal from "../components/CreateItemModal";
+import { db } from "../../firebaseConfig";
+import { ref, onValue, off, get } from "firebase/database";
 
 const ListDetailsScreen = ({ route, navigation }) => {
     const { familyId, listId, listName, collaborators } = route.params; // Recebe o nome da lista e os colaboradores
-    console.log("Parâmetros recebidos:", familyId, listId, listName, collaborators);
+    const { fromHistory } = route.params || {};
     const [items, setItems] = useState([]);
     const [loading, setLoading] = useState(false);
     const [isModalVisible, setModalVisible] = useState(false);
     const [optionsModalVisible, setOptionsModalVisible] = useState(false);
     const [hideCheckedItems, setHideCheckedItems] = useState(false);
     const [currentUser, setCurrentUser] = useState({name: ""});
+    const [isDetailModalVisible, setDetailModalVisible] = useState(false);
+    const [selectedItem, setSelectedItem] = useState(null);
+    const [itemDetails, setItemDetails] = useState([]);
+    const [loadingDetails, setLoadingDetails] = useState(false);
 
     useEffect(() => {
         const loadUser = async () => {
@@ -105,7 +112,7 @@ const ListDetailsScreen = ({ route, navigation }) => {
                 </TouchableOpacity>
             ),
         });
-    }, [navigation, listName, collaborators]);
+    }, [navigation, listName, collaborators, fromHistory]);
 
     // Função para carregar os itens da lista
     const loadItems = async () => {
@@ -212,16 +219,113 @@ const ListDetailsScreen = ({ route, navigation }) => {
         }
     };
 
-    useEffect(() => {
-        loadItems();
-    }, []);
+    // Função para buscar os detalhes do item
+    const fetchItemDetailsHandler = async (itemName) => {
+        try {
+            setLoadingDetails(true);
+            const response = await fetchItemDetails(itemName);
+            setItemDetails( response|| []);
+        } catch (error) {
+            console.error("Erro ao buscar detalhes do item:", error);
+            Alert.alert("Erro", "Não foi possível carregar os detalhes do item.");
+        } finally {
+            setLoadingDetails(false);
+        }
+    };
 
-    const filteredItems = hideCheckedItems
+    // Função para abrir o modal
+    const openDetailModal = (item) => {
+        setSelectedItem(item);
+        setDetailModalVisible(true);
+        fetchItemDetailsHandler(item.nome);
+    };
+
+    useEffect(() => {
+        if (!familyId || !listId || !collaborators) return;
+
+        // Carrega os itens uma vez (API/cache)
+        loadItems();
+
+        setLoading(true);
+        const itemsRef = ref(db, `shopping_lists/${familyId}/${listId}/itens`);
+        console.log("Referência do Firebase:", itemsRef);
+
+        const handleValueChange = (snapshot) => {
+            console.log("Dados recebidos do Firebase:", snapshot.val());
+            const data = snapshot.val() || {};
+            let itemsArray = Array.isArray(data) ? data : Object.values(data);
+            console.log("Itens recebidos:", itemsArray);
+            itemsArray = itemsArray
+                .filter(Boolean) // remove nulos/undefined
+                .map(item => ({
+                    ...item,
+                    by_user: collaborators && collaborators[item.by_user]
+                        ? collaborators[item.by_user]
+                        : { name: item.by_user }
+                }));
+
+            setItems(itemsArray);
+            setLoading(false);
+        };
+
+        onValue(itemsRef, handleValueChange);
+        console.log("Listener adicionado com sucesso!");
+
+        return () => {
+            off(itemsRef, "value", handleValueChange);
+            console.log("Listener removido!");
+        };
+    }, [familyId, listId, collaborators]);
+
+    const filteredItems = (hideCheckedItems
         ? items.filter((item) => !item.checado)
-        : items;
+        : items
+    ).filter(Boolean); // <-- remove nulos/undefined
 
     return (
         <View style={styles.container}>
+            {/* Modal de Detalhes do Item */}
+            <Modal
+                visible={isDetailModalVisible}
+                animationType="slide"
+                transparent={true}
+                onRequestClose={() => setDetailModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>{selectedItem?.nome}</Text>
+                        {loadingDetails ? (
+                            <ActivityIndicator size="large" color="#9b87f5" />
+                        ) : itemDetails.length > 0 ? (
+                            <FlatList
+                                data={itemDetails}
+                                keyExtractor={(item, index) => index.toString()}
+                                renderItem={({ item }) => (
+                                    <View style={styles.detailItem}>
+                                        <Text style={styles.detailText}>
+                                            {item.SUPERMERCADO} - R${item.PRECO}
+                                        </Text>
+                                        <Text style={styles.detailSubText}>
+                                            {item.TIPO_PRODUTO} • {item.DEPARTAMENTO}
+                                        </Text>
+                                    </View>
+                                )}
+                            />
+                        ) : (
+                            <Text style={styles.noDetailsText}>
+                                Nenhum dado de preço disponível para este item.
+                            </Text>
+                        )}
+                        <TouchableOpacity
+                            style={styles.closeButton}
+                            onPress={() => setDetailModalVisible(false)}
+                        >
+                            <Text style={styles.closeButtonText}>Fechar</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
+
             {/* Modal de Opções */}
             <Modal
                 visible={optionsModalVisible}
@@ -275,7 +379,7 @@ const ListDetailsScreen = ({ route, navigation }) => {
                 <FlatList
                     style={{ padding: 5 }}
                     data={filteredItems}
-                    keyExtractor={(item, index) => index.toString()}
+                    keyExtractor={(item, index) => (item && item.nome ? item.nome + index : index.toString())}
                     renderItem={({ item, index }) => (
                         <View style={styles.itemContainer}>
                             <TouchableOpacity
@@ -311,6 +415,21 @@ const ListDetailsScreen = ({ route, navigation }) => {
                                 </Text>
                                 <Text style={styles.itemCreator}>{item.by_user.name}</Text>
                             </View>
+                            <TouchableOpacity onPress={() => openDetailModal(item)}>
+                                <Svg
+                                    width="24"
+                                    height="24"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="#9b87f5"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                >
+                                    <Path d="M12 1v22" />
+                                    <Path d="M17 5H9.5a3.5 3.5 0 0 0 0 7H14.5a3.5 3.5 0 0 1 0 7H6" />
+                                </Svg>
+                            </TouchableOpacity>
                             <TouchableOpacity onPress={() => deleteItem(index)}>
                                 <Svg
                                     width="24"
@@ -446,7 +565,21 @@ const styles = StyleSheet.create({
     modalOverlay: {
         flex: 1,
         backgroundColor: "rgba(0, 0, 0, 0.5)",
-        justifyContent: "flex-end",
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    modalContent: {
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        padding: 20,
+        width: "90%",
+        maxHeight: "80%",
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 16,
+        textAlign: "center",
     },
     optionsModal: {
         backgroundColor: "#fff",
@@ -468,6 +601,58 @@ const styles = StyleSheet.create({
     },
     optionDangerText: {
         color: "#DA291C",
+    },
+    detailModalContainer: {
+        flex: 1,
+        justifyContent: "center",
+        alignItems: "center",
+    },
+    detailModal: {
+        width: "90%",
+        backgroundColor: "#fff",
+        borderRadius: 8,
+        padding: 20,
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.3,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    detailModalTitle: {
+        fontSize: 18,
+        fontWeight: "bold",
+        marginBottom: 10,
+    },
+    detailItem: {
+        paddingVertical: 10,
+        borderBottomWidth: 1,
+        borderBottomColor: "#ddd",
+    },
+    detailText: {
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    detailSubText: {
+        fontSize: 14,
+        color: "#666",
+    },
+    closeButton: {
+        backgroundColor: "#9b87f5",
+        padding: 12,
+        borderRadius: 8,
+        alignItems: "center",
+        marginTop: 16,
+    },
+    closeButtonText: {
+        color: "#fff",
+        fontSize: 16,
+        fontWeight: "bold",
+    },
+    noDetailsText: {
+        fontSize: 14,
+        color: "#999",
+        textAlign: "center",
+        marginTop: 10,
     },
 });
 

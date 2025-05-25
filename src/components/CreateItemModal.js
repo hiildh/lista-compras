@@ -25,8 +25,9 @@ const CreateItemModal = ({ visible, onClose, onAddItem, items }) => {
 
         try {
             setLoadingSuggestions(true);
-            const response = await api.get("/items/suggestions", {
+            const response = await api.get("/products/suggestions", {
                 params: { q: query },
+                limit: 5,
             });
             setSuggestions(response.data || []);
         } catch (error) {
@@ -80,29 +81,36 @@ const CreateItemModal = ({ visible, onClose, onAddItem, items }) => {
                         value={searchQuery}
                         onChangeText={setSearchQuery}
                     />
-                    {loadingSuggestions ? (
-                        <ActivityIndicator size="small" color="#9b87f5" />
-                    ) : (
-                        <FlatList
-                            data={suggestions}
-                            keyExtractor={(item, index) => index.toString()}
-                            renderItem={({ item }) => (
-                                <TouchableOpacity
-                                    style={styles.suggestionItem}
-                                    onPress={() => handleAddItem(item.nome)}
-                                >
-                                    <Text style={styles.suggestionText}>{item.nome}</Text>
-                                </TouchableOpacity>
-                            )}
-                            ListEmptyComponent={
-                                searchQuery.trim() && (
-                                    <Text style={styles.noSuggestionsText}>
-                                        Nenhuma sugestão encontrada.
-                                    </Text>
-                                )
-                            }
-                        />
-                    )}
+                    <View style={styles.suggestionsContainer}>
+                        {loadingSuggestions ? (
+                            <ActivityIndicator size="small" color="#9b87f5" />
+                        ) : (
+                            <FlatList
+                                data={suggestions}
+                                keyExtractor={(item, index) => item.DESCRICAO + index}
+                                renderItem={({ item }) => (
+                                    <TouchableOpacity
+                                        style={styles.suggestionItem}
+                                        onPress={() => handleAddItem(item.DESCRICAO)}
+                                    >
+                                        <Text style={styles.suggestionText}>
+                                            {item.DESCRICAO}
+                                            {item.PRECO ? ` • R$${item.PRECO}` : ""}
+                                            {item.SUPERMERCADO ? ` • ${item.SUPERMERCADO}` : ""}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
+                                ListEmptyComponent={
+                                    searchQuery.trim() && (
+                                        <Text style={styles.noSuggestionsText}>
+                                            Nenhuma sugestão encontrada.
+                                        </Text>
+                                    )
+                                }
+                                keyboardShouldPersistTaps="handled"
+                            />
+                        )}
+                    </View>
                     <TouchableOpacity
                         style={styles.addButton}
                         onPress={() => handleAddItem(searchQuery)}
@@ -150,6 +158,10 @@ const styles = StyleSheet.create({
         fontSize: 16,
         marginBottom: 16,
         backgroundColor: "#f9f9f9",
+    },
+    suggestionsContainer: {
+        maxHeight: 200,
+        marginBottom: 16,
     },
     suggestionItem: {
         padding: 12,

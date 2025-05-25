@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { StyleSheet, Text, TextInput, View, TouchableOpacity, Alert } from "react-native";
 import { validateName, validateEmail, validatePassword } from "../utils/validation";
 import { login, register } from "../services/api";
-import { saveAuthData } from "../services/storage";
+import { saveAuthData, getAuthData } from "../services/storage";
 import axios from "axios";
+import { firebaseAuth } from "../../firebaseConfig";
+import { signInWithCustomToken } from "firebase/auth";
 
 export const AuthForm = ({ navigation }) => {
     const [isLogin, setIsLogin] = useState(true); // agora inicia em login
@@ -55,19 +57,40 @@ export const AuthForm = ({ navigation }) => {
         try {
             if (isLogin) {
                 const data = await login(email, password);
-                const { access_token, family_id, user } = data;
-                await saveAuthData(access_token, family_id, user);
+                const { access_token, id_token, firebase_custom_token, family_id, user } = data;
+                await saveAuthData(access_token, id_token, firebase_custom_token, family_id, user);
+                // Firebase authentication
+                const { firebase_custom_token: firebaseIdToken } = await getAuthData();
+                if (firebaseIdToken) {
+                    try {
+                        await signInWithCustomToken(firebaseAuth, firebaseIdToken);
+                        console.log("Usuário autenticado no Firebase Auth!");
+                    } catch (e) {
+                        console.error("Erro ao autenticar no Firebase Auth:", e);
+                    }
+                }
                 Alert.alert("Sucesso", "Login realizado com sucesso!");
                 navigation.navigate("Home");
             } else {
                 const data = await register(name, email, password);
-                const { access_token, family_id } = data;
-                await saveAuthData(access_token, family_id);
-                Alert.alert("Sucesso", "Conta criada com sucesso!");
+                const { access_token, id_token, firebase_custom_token, family_id, user } = data;
+                await saveAuthData(access_token, id_token, firebase_custom_token, family_id, user);
+                // Firebase authentication
+                const { firebase_custom_token: firebaseIdToken } = await getAuthData();
+                if (firebaseIdToken) {
+                    try {
+                        await signInWithCustomToken(firebaseAuth, firebaseIdToken);
+                        console.log("Usuário autenticado no Firebase Auth!");
+                    } catch (e) {
+                        console.error("Erro ao autenticar no Firebase Auth:", e);
+                    }
+                }
+                Alert.alert("Sucesso", "Cadastro realizado com sucesso!");
                 navigation.navigate("Home");
             }
         } catch (err) {
             Alert.alert("Erro", "Ocorreu um erro ao processar sua solicitação.");
+            console.error("Error during authentication:", err);
         }
     };
 

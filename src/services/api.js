@@ -18,7 +18,7 @@ NetInfo.addEventListener(async (state) => {
             );
             const familyId = await AsyncStorage.getItem("family_id");
             if (familyId) {
-                await syncData(familyId);
+                // await syncData(familyId);
             } else {
                 console.warn("familyId não encontrado para sincronização.");
             }
@@ -111,7 +111,6 @@ export const fetchShoppingLists = async (familyId, query = "", skipCacheUpdate =
             await AsyncStorage.setItem(cacheKey, JSON.stringify(response.data));
             console.log("Dados das listas de compras salvos no cache.");
         }
-        console.log("Dados das listas de compras:", response.data);
         return response.data;
     } catch (error) {
         console.error("Erro ao buscar listas de compras:", error);
@@ -154,13 +153,10 @@ export const fetchShoppingListItems = async (familyId, listId, saveCache=true) =
         if(saveCache) {
             // Salve os dados no AsyncStorage
             await AsyncStorage.setItem(cacheKey, JSON.stringify(response.data));
-            console.log("Dados da lista de compras:", response.data);
         }
         return response.data;
     } catch (error) {
         console.error("Erro ao buscar itens da lista:", error);
-        console.log("Erro ao buscar itens da lista:", error.response?.data);
-        console.log("Erro ao buscar itens da lista:", error.response?.status);
 
         // Se falhar, tente buscar os dados do AsyncStorage
         const cachedData = await AsyncStorage.getItem(cacheKey);
@@ -176,22 +172,17 @@ export const fetchShoppingListItems = async (familyId, listId, saveCache=true) =
 export const deleteShoppingList = async (familyId, listId) => {
     if (!listId.startsWith("temp")) {
         const response = await api.delete(`/shopping-lists/${familyId}/${listId}`);
-        console.log("Lista excluída:", response.data);
     }
     // Remover o cache da lista
     const cacheListsList = `shopping_lists_${familyId}`;
-    console.log("Cache de listas nome:", cacheListsList);
     const cacheList = await AsyncStorage.getItem(cacheListsList);
-    console.log("Cache de listas:", cacheList);
     if (cacheList) {
-        console.log("Cache de listas encontrado:", cacheList);
         let parsedCache;
         try {
             parsedCache = JSON.parse(cacheList);
         } catch (e) {
             parsedCache = undefined;
         }
-        console.log("Cache de listas parseado:", parsedCache);
 
         // Se for array (formato novo)
         if (Array.isArray(parsedCache)) {
@@ -223,15 +214,21 @@ export const deleteShoppingList = async (familyId, listId) => {
 
 // Adicionar itens à lista
 export const addShoppingListItems = async (familyId, listId, items) => {
-    console.log("Adicionando itens à lista:", items);
     // Remove a chave 'by_user' de cada item antes de enviar para a API
     const sanitizedItems = items.map(({ by_user, ...rest }) => rest);
-    console.log("Itens sanitizados:", sanitizedItems);
     const response = await api.post(`/shopping-lists/${familyId}/${listId}/items`, {
         itens: sanitizedItems,
     });
     return response.data;
 };
+
+// Buscar preços de itens
+export const fetchItemDetails = async (itemName) => {
+    const response = await api.get("/products/suggestions", {
+        params: { q: itemName },
+    });
+    return response.data;
+}
 
 // Atualizar (checkar) um item
 export const updateShoppingListItem = async (familyId, listId, itemIndex, data) => {
@@ -344,13 +341,6 @@ export const syncData = async (familyId) => {
                         keys = keys.filter((k) => k !== itemKeyOld);
                         console.log("Chaves atualizadas:", keys);
                     }
-                } else if (!serverLists.lists[list.id]) {
-                    // Lista não existe no servidor (caso raro)
-                    console.log("Lista não existe no servidor, criando:", list.nome);
-                    const response = await createShoppingList(list.nome, list.familia, list.itens || []);
-                    const newId = response.id;
-                    list.id = newId;
-                    list.offline = false;
                 } else {
                     // Lista já existe: sincronize apenas os itens novos
                     console.log("Lista já existe no servidor, sincronizando itens:", list.nome);

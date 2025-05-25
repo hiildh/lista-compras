@@ -3,6 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, Switch, StyleSheet, Alert, Act
 import { ShoppingNavBar } from "../components/ShoppingNavBar";
 import api from "../services/api";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Svg, { Path, Polyline, Line } from "react-native-svg";
 
 const ProfileScreen = ({ navigation }) => {
     const [user, setUser] = useState({ name: "", email: "" });
@@ -134,8 +135,7 @@ const ProfileScreen = ({ navigation }) => {
                     <View style={{ flexDirection: "row", justifyContent: "space-between"}}>
                         <Text style={styles.logoutText}>Log Out</Text>
                         {/* SVG Icon */}
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
+                        <Svg
                             width={24}
                             height={24}
                             viewBox="0 0 24 24"
@@ -146,10 +146,10 @@ const ProfileScreen = ({ navigation }) => {
                             strokeLinejoin="round"
                             style={{ marginRight: 8 }}
                         >
-                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-                            <polyline points="16 17 21 12 16 7"></polyline>
-                            <line x1="21" x2="9" y1="12" y2="12"></line>
-                        </svg>
+                            <Path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <Polyline points="16 17 21 12 16 7" />
+                            <Line x1="21" y1="12" x2="9" y2="12" />
+                        </Svg>
                     </View>
                 </TouchableOpacity>
             </View>
